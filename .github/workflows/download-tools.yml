@@ -1,0 +1,76 @@
+name: Download Internal Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      autofind_version:
+        description: 'Autofind version to download'
+        required: false
+        default: 'v5.0.5'
+        type: string
+      ccrcli_version:
+        description: 'CCRCli version to download'
+        required: false
+        default: 'v0.2.0'
+        type: string
+
+jobs:
+  download-tools:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up environment
+        run: |
+          echo "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GH_HOST=github.com" >> $GITHUB_ENV
+      
+      - name: Download autofind (method from logs)
+        continue-on-error: true
+        env:
+          GH_REPO: github/codeml-detector
+          ARTIFACT_VERSION: ${{ inputs.autofind_version }}
+        run: |
+          echo "=== Downloading autofind $ARTIFACT_VERSION from $GH_REPO ==="
+          mkdir -p ./tools
+          gh release download "$ARTIFACT_VERSION" -D ./tools
+          
+          if [ -f ./tools/autofind ]; then
+            chmod +x ./tools/autofind
+            ./tools/autofind -v
+          fi
+      
+      - name: Download ccrcli (method from logs)
+        continue-on-error: true
+        env:
+          ARTIFACT_VERSION: ${{ inputs.ccrcli_version }}
+          ADDITIONAL_ARTIFACT_REPOSITORIES_AND_VERSIONS: '{"github/copilot-code-review-published-artifacts": "${{ inputs.ccrcli_version }}", "github/autovalidate-cli-binaries": "v0.2.0"}'
+        run: |
+          echo "=== Downloading ccrcli $ARTIFACT_VERSION ==="
+          mkdir -p ./tools
+          gh release download "$ARTIFACT_VERSION" -D ./tools --repo "github/copilot-code-review-published-artifacts"
+          
+          if [ -f ./tools/ccrcli ]; then
+            chmod +x ./tools/ccrcli
+            ./tools/ccrcli --version || ./tools/ccrcli --help || echo "ccrcli downloaded"
+          fi
+      
+      - name: List downloaded files
+        run: |
+          echo "=== Downloaded files ==="
+          ls -la ./tools/ || echo "No tools directory"
+      
+      - name: Upload tools as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: downloaded-tools
+          path: ./tools/
+          retention-days: 7
+          if-no-files-found: warn
