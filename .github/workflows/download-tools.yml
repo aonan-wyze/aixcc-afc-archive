@@ -1,0 +1,72 @@
+name: Download Internal Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      autofind_version:
+        description: 'Autofind version to download'
+        required: false
+        default: 'v5.0.5'
+        type: string
+      ccrcli_version:
+        description: 'CCRCli version to download'
+        required: false
+        default: 'v0.2.0'
+        type: string
+
+jobs:
+  download-tools:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up environment
+        run: |
+          echo "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GH_HOST=github.com" >> $GITHUB_ENV
+      
+      - name: Try download autofind
+        continue-on-error: true
+        run: |
+          echo "=== Attempting to download autofind ${{ inputs.autofind_version }} ==="
+          gh release download "${{ inputs.autofind_version }}" \
+            -D ./tools \
+            --repo github/codeml-detector || echo "Failed to download autofind"
+          
+          if [ -f ./tools/autofind ]; then
+            chmod +x ./tools/autofind
+            ./tools/autofind -v
+          fi
+      
+      - name: Try download ccrcli
+        continue-on-error: true
+        run: |
+          echo "=== Attempting to download ccrcli ${{ inputs.ccrcli_version }} ==="
+          gh release download "${{ inputs.ccrcli_version }}" \
+            -D ./tools \
+            --repo github/copilot-code-review-published-artifacts || echo "Failed to download ccrcli"
+          
+          if [ -f ./tools/ccrcli ]; then
+            chmod +x ./tools/ccrcli
+            ./tools/ccrcli --version || ./tools/ccrcli --help || echo "ccrcli downloaded"
+          fi
+      
+      - name: List downloaded files
+        run: |
+          echo "=== Downloaded files ==="
+          ls -la ./tools/ || echo "No tools directory"
+      
+      - name: Upload tools as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: downloaded-tools
+          path: ./tools/
+          retention-days: 7
+          if-no-files-found: warn
