@@ -7,3 +7,4 @@ echo "  Repository: github/codeml-detector"
 echo "  Version: v5.0.5"
 echo ""
 echo "The actual tool was not accessible during download."
+exit 1

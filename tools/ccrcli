@@ -7,3 +7,4 @@ echo "  Repository: github/copilot-code-review-published-artifacts"
 echo "  Version: v0.2.0"
 echo ""
 echo "The actual tool was not accessible during download."
+exit 1
