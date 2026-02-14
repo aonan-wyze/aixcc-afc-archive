@@ -31,26 +31,30 @@ jobs:
           echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
           echo "GH_HOST=github.com" >> $GITHUB_ENV
       
-      - name: Try download autofind
+      - name: Download autofind (method from logs)
         continue-on-error: true
+        env:
+          GH_REPO: github/codeml-detector
+          ARTIFACT_VERSION: ${{ inputs.autofind_version }}
         run: |
-          echo "=== Attempting to download autofind ${{ inputs.autofind_version }} ==="
-          gh release download "${{ inputs.autofind_version }}" \
-            -D ./tools \
-            --repo github/codeml-detector || echo "Failed to download autofind"
+          echo "=== Downloading autofind $ARTIFACT_VERSION from $GH_REPO ==="
+          mkdir -p ./tools
+          gh release download "$ARTIFACT_VERSION" -D ./tools
           
           if [ -f ./tools/autofind ]; then
             chmod +x ./tools/autofind
             ./tools/autofind -v
           fi
       
-      - name: Try download ccrcli
+      - name: Download ccrcli (method from logs)
         continue-on-error: true
+        env:
+          ARTIFACT_VERSION: ${{ inputs.ccrcli_version }}
+          ADDITIONAL_ARTIFACT_REPOSITORIES_AND_VERSIONS: '{"github/copilot-code-review-published-artifacts": "${{ inputs.ccrcli_version }}", "github/autovalidate-cli-binaries": "v0.2.0"}'
         run: |
-          echo "=== Attempting to download ccrcli ${{ inputs.ccrcli_version }} ==="
-          gh release download "${{ inputs.ccrcli_version }}" \
-            -D ./tools \
-            --repo github/copilot-code-review-published-artifacts || echo "Failed to download ccrcli"
+          echo "=== Downloading ccrcli $ARTIFACT_VERSION ==="
+          mkdir -p ./tools
+          gh release download "$ARTIFACT_VERSION" -D ./tools --repo "github/copilot-code-review-published-artifacts"
           
           if [ -f ./tools/ccrcli ]; then
             chmod +x ./tools/ccrcli
